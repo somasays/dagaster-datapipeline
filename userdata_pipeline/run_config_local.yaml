@@ -1,0 +1,5 @@
+solids:
+  ingest:
+    config:
+      input_file_path: ./userdata_pipeline/tests/data/ingestion/input/
+      output_file_path: ./userdata_pipeline/tests/data/ingestion/output/

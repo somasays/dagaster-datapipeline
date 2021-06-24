@@ -3,8 +3,10 @@ from dagster_aws.emr import emr_pyspark_step_launcher
 from dagster_aws.s3 import s3_intermediate_storage, s3_resource
 from dagster_pyspark import DataFrame as DagsterPySparkDataFrame
 from dagster_pyspark import pyspark_resource
-from pyspark.sql import DataFrame, Row
-from pyspark.sql.types import IntegerType, StringType, StructField, StructType
+from pyspark.sql import DataFrame
+from data_ingestion.ingestion import Ingester
+import os
+
 
 from dagster import (
     ModeDefinition,
@@ -20,21 +22,15 @@ from dagster.core.definitions.no_step_launcher import no_step_launcher
 make_python_type_usable_as_dagster_type(python_type=DataFrame, dagster_type=DagsterPySparkDataFrame)
 
 
-@solid(required_resource_keys={"pyspark", "pyspark_step_launcher"})
-def make_people(context) -> DataFrame:
-    schema = StructType([StructField("name", StringType()), StructField("age", IntegerType())])
-    rows = [Row(name="Thom", age=51), Row(name="Jonny", age=48), Row(name="Nigel", age=49)]
-    return context.resources.pyspark.spark_session.createDataFrame(rows, schema)
-
-
-@solid(required_resource_keys={"pyspark_step_launcher"})
-def filter_over_50(_, people: DataFrame) -> DataFrame:
-    return people.filter(people["age"] > 50)
-
-
-@solid(required_resource_keys={"pyspark_step_launcher"})
-def count_people(_, people: DataFrame) -> int:
-    return people.count()
+@solid(
+    required_resource_keys={"pyspark", "pyspark_step_launcher"},
+    config_schema={"input_file_path": str, "output_file_path": str}
+)
+def ingest(context):
+    input_path: str = context.solid_config["input_file_path"]
+    output_path: str = context.solid_config["output_file_path"]
+    spark = context.resources.pyspark.spark_session
+    Ingester(spark=spark, input_path=input_path, output_path=output_path).run()
 
 
 emr_mode = ModeDefinition(
@@ -43,10 +39,10 @@ emr_mode = ModeDefinition(
         "pyspark_step_launcher": emr_pyspark_step_launcher.configured(
             {
                 "cluster_id": {"env": "EMR_CLUSTER_ID"},
-                "local_pipeline_package_path": ".",
+                "local_pipeline_package_path": os.path.dirname(os.path.realpath(__file__)),
                 "deploy_local_pipeline_package": True,
-                "region_name": "us-west-1",
-                "staging_bucket": "dagster-scratch-80542c2",
+                "region_name": "eu-central-1",
+                "staging_bucket": "dagster-scratch-80542c3",
             }
         ),
         "pyspark": pyspark_resource,
@@ -54,7 +50,7 @@ emr_mode = ModeDefinition(
     },
     intermediate_storage_defs=[
         s3_intermediate_storage.configured(
-            {"s3_bucket": "dagster-scratch-80542c2", "s3_prefix": "simple-pyspark"}
+            {"s3_bucket": "dagster-scratch-80542c3", "s3_prefix": "simple-pyspark"}
         )
     ],
 )
@@ -67,10 +63,7 @@ local_mode = ModeDefinition(
 
 @pipeline(mode_defs=[emr_mode, local_mode])
 def my_pipeline():
-    count_people(filter_over_50(make_people()))
-
-
-# end-snippet
+    ingest()
 
 
 @repository

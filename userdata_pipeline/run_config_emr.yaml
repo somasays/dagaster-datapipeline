@@ -1,0 +1,5 @@
+solids:
+  ingest:
+    config:
+      input_file_path: s3://roche-twde-datapipeline-spike-data/datasets/ingestion/input/
+      output_file_path: s3://roche-twde-datapipeline-spike-data/datasets/ingestion/output-emr/

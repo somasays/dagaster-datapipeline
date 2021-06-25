@@ -8,6 +8,7 @@ from data_ingestion.ingestion import Ingester
 from data_transformation.transformation import Transformer
 import os
 from datetime import datetime
+from dagster import schedule
 
 from dagster import (
     ModeDefinition,
@@ -86,6 +87,26 @@ def my_pipeline():
     transform(ingest())
 
 
+@schedule(cron_schedule="*/2 * * * *", pipeline_name="my_pipeline", execution_timezone="Europe/Berlin", mode="local")
+def my_execution_time_schedule(date):
+    # date = context.scheduled_execution_time.strftime("%Y-%m-%d")
+    return {
+        "solids": {
+            "ingest": {
+                "config": {
+                    "input_file_path": "/Users/soma/ssa/code/learning/dagster/pipeline_spike/userdata_pipeline/tests/data/ingestion/input/",
+                    "output_file_path": "/Users/soma/ssa/code/learning/dagster/pipeline_spike/userdata_pipeline/tests/data/ingestion/output/"
+                }
+            },
+            "transform": {
+                "config": {
+                    "transformation_output_path": "/Users/soma/ssa/code/learning/dagster/pipeline_spike/userdata_pipeline/tests/data/transformation/output/"
+                }
+            }
+        }
+    }
+
+
 @repository
 def emr_pyspark_example():
-    return [my_pipeline]
+    return [my_pipeline, my_execution_time_schedule]

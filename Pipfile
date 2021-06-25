@@ -10,6 +10,7 @@ dagster-pyspark = "*"
 pyspark = "*"
 dagster-aws = "*"
 dagit = "*"
+dagster-cron = "*"
 
 [dev-packages]
 

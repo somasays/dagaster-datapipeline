@@ -1,0 +1,8 @@
+infra/
+Dockerfile
+.venv/
+history/
+schedules/
+storage/
+.telemetry/
+.logs_queue/

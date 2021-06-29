@@ -1,0 +1,4 @@
+helm upgrade --install dagster-release dagster/dagster -f values.yaml \
+  --set runLauncher.type=CeleryK8sRunLauncher \
+  --set dagsterDaemon.queuedRunCoordinator.enabled=true \
+  --set rabbitmq.enabled=true
